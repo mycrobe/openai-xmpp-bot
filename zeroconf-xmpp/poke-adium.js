@@ -6,12 +6,16 @@ const net = require('net');
 const from = "mulvaney@bragg"; // Replace with the actual "from" value
 const serviceName = from.split('@')[1];
 
+const botAvahiName = 'test_thing';
+const botDisplayName = 'test thing';
+
 const XMPP_CLIENT_PORT = 12345; // Replace with the desired port for your XMPP client
 
 // Advertise XMPP service using Bonjour/Zeroconf
 const advertiseService = (port) => {
   const service = new dnssd.Advertisement(dnssd.tcp('presence'), port, {
-    name: 'test thing',
+    name: botAvahiName, // the service name
+    txt: { "1st": botDisplayName }, // the display name
   });
 
   service.start();
