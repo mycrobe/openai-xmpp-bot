@@ -3,6 +3,7 @@ const dnssd = require('dnssd');
 const net = require('net');
 const cheerio = require('cheerio');
 const xml2js = require('xml2js');
+const { parseMessage } = require('./xml-stream-parser')
 
 
 const XMPP_CLIENT_PORT = 12345; // Replace with the desired port for your XMPP client
@@ -46,21 +47,10 @@ const server = net.createServer((socket) => {
     
     console.log('DATA', data.toString());
 
-    xml2js.parseString(data.toString(), (err, result) => {
-      console.dir(result);
-    });
-    // try {
-    //   const $ = cheerio.load(data.toString());
-    //   const message = $('message');
-    //   if (message.attr('type') === 'chat') {
-    //     const from = message.attr('from');
-    //     const body = message.find('body').text();
-    //     console.log(`Received message from ${from}: ${body}`);
-    //   }
-    // } catch (error) {
-    //   console.error('Error parsing incoming data:', error);
-    // }
-//   });
+    const { message, stream } = parseMessage(data.toString());
+
+    if (message) console.log('MESSAGE', message);
+    if (stream) console.log('STREAM', stream);
   });
 });
 
