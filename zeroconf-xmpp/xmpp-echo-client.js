@@ -56,6 +56,8 @@ const getSocketForResponse = async (who) => {
 };
 
 
+
+
 // Set up a simple XMPP server
 const server = net.createServer((socket) => {
   socket.on('connection', (stream) => console.log('CONNECTION', stream));
@@ -75,11 +77,13 @@ const server = net.createServer((socket) => {
 
       responseSocket.write('<?xml version="1.0" encoding="UTF-8" ?>');
       responseSocket.write(streamResponse);
+      responseSocket.write(`<message from="${stream.to}" type="chat" to="${stream.from}"><body>TEST</body><html xmlns="http://www.w3.org/1999/xhtml"><body><div>TEST</div></body></html></message>`)
     }
     if (message) {
       console.log('MESSAGE', message);
       const messageResponse = `<message from="${message.to}" type="chat" to="${message.from}"><body>${message.body}</body><html xmlns="http://www.w3.org/1999/xhtml"><body><div>${message.html}</div></body></html></message>`;
       console.log('MESSAGERESP', messageResponse);
+      // responseSocket = await getSocketForResponse(stream.from);
       responseSocket.write(messageResponse);
     }
   });
@@ -88,6 +92,9 @@ const server = net.createServer((socket) => {
 server.listen(XMPP_CLIENT_PORT, () => {
   console.log(`XMPP server listening on port ${XMPP_CLIENT_PORT}`);
 });
+
+
+
 
 // Cleanup on exit
 process.on('SIGINT', () => {
