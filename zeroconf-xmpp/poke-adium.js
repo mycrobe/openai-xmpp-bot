@@ -3,8 +3,7 @@ const dnssd = require('dnssd');
 const net = require('net');
 
 // Extract the desired service name from the "from" field in the <stream:stream> message
-const from = "mulvaney@bragg"; // Replace with the actual "from" value
-const serviceName = from.split('@')[1];
+const from = "mulvaney@petal"; // Replace with the actual "from" value
 
 const botAvahiName = 'test_thing';
 const botDisplayName = 'test thing';
@@ -38,7 +37,7 @@ const getUrlForResponse = async (who) => {
       // Check if the service name matches the desired name
       if (service.name === who) {
         // Stop browsing when the desired service is found
-        browser.stop();
+      //  browser.stop();
         resolve({ url: service.addresses[0], port: service.port });
       }
     });
@@ -48,12 +47,11 @@ const getUrlForResponse = async (who) => {
 
 const main = async () => {
   const urlBits = await getUrlForResponse(from);
-  const socket = net.connect(urlBits.port, urlBits.url, () => {
-    console.log(`Connected to service at ${urlBits.url}:${urlBits.port}`);
-    socket.write('<?xml version="1.0" encoding="UTF-8" ?>');
-    socket.write(`<stream:stream to="mulvaney@bragg" from="test thing" xmlns="jabber:client" xmlns:stream="http://etherx.jabber.org/streams">`);
-    socket.write(`<message from="test thing" type="chat" to="mulvaney@bragg"><body>why hello there</body><html xmlns="http://www.w3.org/1999/xhtml"><body><div><b>why hello there</b></div></body></html></message>`);
-  });
+  const socket = net.connect(urlBits.port, urlBits.url);
+  console.log(`Connected to service at ${urlBits.url}:${urlBits.port}`);
+  socket.write('<?xml version="1.0" encoding="UTF-8" ?>');
+  socket.write(`<stream:stream to="mulvaney@bragg" from="test thing" xmlns="jabber:client" xmlns:stream="http://etherx.jabber.org/streams">`);
+  socket.write(`<message from="test thing" type="chat" to="mulvaney@bragg"><body>why hello there</body><html xmlns="http://www.w3.org/1999/xhtml"><body><div><b>why hello there</b></div></body></html></message>`);
 };
 
 main();
