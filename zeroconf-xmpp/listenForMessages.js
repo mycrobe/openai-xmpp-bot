@@ -11,10 +11,10 @@ const createServer = (port = 12345, onMessage = console.log, onComposing = conso
             messages.forEach((message) => {
                 if (message) {
                     if (message.type === 'chat') {
-                        onMessage(message);
+                        onMessage(message, message.from);
                     }
                     else if (message.type === 'composing') {
-                        onComposing(message.composing);
+                        onComposing(message.composing, message.from);
                     }
                 }
             });

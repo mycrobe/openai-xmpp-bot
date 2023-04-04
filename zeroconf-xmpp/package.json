@@ -10,6 +10,8 @@
   "license": "ISC",
   "dependencies": {
     "dnssd": "^0.4.1",
+    "dotenv": "^16.0.3",
+    "openai": "^3.2.1",
     "saxes": "^6.0.0"
   },
   "type": "module"

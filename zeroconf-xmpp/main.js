@@ -1,19 +1,34 @@
+import * as dotenv from 'dotenv';
+dotenv.config();
+
 import advertiseService from "./advertiseService.js";
 import createServer from "./listenForMessages.js";
-import sendMessage from "./sendMessage.js";
 
-const PORT = 12345;
-const advertisement = advertiseService({ port: PORT, advertisedName: 'nodebot', displayName: 'Node Bot' });
-const server = createServer(PORT,
-    async (message) => await sendMessage(message.from, message.body),
-    async (composing) => console.log('COMPOSING', composing)
-);
+const bots = [
+    await import("./gpt35.js"),
+]
 
+const toCleanup = bots.map(botImport => {
+    const bot = botImport.default();
+    const advertisement = advertiseService({
+        port: bot.port,
+        advertisedName: bot.advertiseName,
+        displayName: bot.displayName
+    });
+    const server = createServer(
+        bot.port,
+        bot.handleMessage,
+        bot.handleComposing
+    );
+    return { advertisement, server };
+})
 
 // Cleanup on exit
 process.on('SIGINT', () => {
     console.log('Cleaning up...');
-    advertisement.stop();
-    server.close();
+    toCleanup.forEach(({ advertisement, server }) => {
+        advertisement.stop();
+        server.close();
+    });
     process.exit();
 });
