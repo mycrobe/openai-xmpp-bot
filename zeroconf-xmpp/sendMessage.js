@@ -35,7 +35,7 @@ const getUrlForResponse = async (who) => {
     return new Promise((resolve) => {
         // Browse for the service
         const browser = new dnssd.Browser(dnssd.tcp('presence'));
-        
+
         browser.on('serviceUp', (service) => {
             // Check if the service name matches the desired name
             if (service.name === who && service.addresses.find((address) => address.match(/192\.168\./))) {
@@ -55,7 +55,7 @@ const sendMessage = async (to, message) => {
     console.log(`Sending message to ${to}: ${message} at ${urlBits.url}:${urlBits.port}`);
     const socket = net.connect(urlBits.port, urlBits.url);
     socket.write(
-`<?xml version="1.0" encoding="UTF-8" ?>
+        `<?xml version="1.0" encoding="UTF-8" ?>
 <stream:stream to="mulvaney@bragg" from="test thing" xmlns="jabber:client" xmlns:stream="http://etherx.jabber.org/streams">
 <message from="test thing" type="chat" to="mulvaney@bragg"><body>${message}</body><html xmlns="http://www.w3.org/1999/xhtml"><body><div><b>${message}</b></div></body></html></message>
 </stream:stream>`,
