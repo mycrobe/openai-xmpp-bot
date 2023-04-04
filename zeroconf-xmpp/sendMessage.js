@@ -50,6 +50,10 @@ const getUrlForResponse = async (who) => {
     });
 }
 
+const formatMessageForHtml = (message) => {
+    return message.replaceAll('\n', '<br />');
+}
+
 const sendMessage = async (to, message) => {
     const urlBits = await getUrlForResponse(to);
     console.log(`Sending message to ${to}: ${message} at ${urlBits.url}:${urlBits.port}`);
@@ -57,7 +61,7 @@ const sendMessage = async (to, message) => {
     socket.write(
         `<?xml version="1.0" encoding="UTF-8" ?>
 <stream:stream to="mulvaney@bragg" from="test thing" xmlns="jabber:client" xmlns:stream="http://etherx.jabber.org/streams">
-<message from="test thing" type="chat" to="mulvaney@bragg"><body>${message}</body><html xmlns="http://www.w3.org/1999/xhtml"><body><div><b>${message}</b></div></body></html></message>
+<message from="test thing" type="chat" to="mulvaney@bragg"><body>${message}</body><html xmlns="http://www.w3.org/1999/xhtml"><body><div><b>${formatMessageForHtml(message)}</b></div></body></html></message>
 </stream:stream>`,
         () => {
             socket.unref();
