@@ -74,7 +74,7 @@ const recentMessages = (since = DEFAULT_SINCE) => {
     });
 }
 
-const getConversations = async (since = DEFAULT_SINCE) => {
+export const getConversations = async (since = DEFAULT_SINCE) => {
     const messages = await recentMessages(since);
     const mostRecentRecievedAt = new Date(_.maxBy(messages, 'date_epoch_ms').date_epoch_ms);
     for await (const row of messages) {
@@ -98,7 +98,7 @@ const getConversations = async (since = DEFAULT_SINCE) => {
     return { sortedGuids, conversations, mostRecentRecievedAt };
 };
 
-const monitorForChanges = async (handleUpdate = console.log, since = DEFAULT_SINCE) => {
+export const monitorForChanges = async (handleUpdate = console.log, since = DEFAULT_SINCE) => {
     let lastUpdate = since;
     
     const checker = async () => {
@@ -112,10 +112,10 @@ const monitorForChanges = async (handleUpdate = console.log, since = DEFAULT_SIN
     return setInterval(checker, 1000);
 }
 
-const handleChange = async (since) => {
-    const { sortedGuids, conversations } = await getConversations(since);
-    console.log('conversations', conversations);
-    console.log('sortedGuids', sortedGuids);
-}
+// const handleChange = async (since) => {
+//     const { sortedGuids, conversations } = await getConversations(since);
+//     console.log('conversations', conversations);
+//     console.log('sortedGuids', sortedGuids);
+// }
 
-const job = monitorForChanges(handleChange);
+// const job = monitorForChanges(handleChange);
