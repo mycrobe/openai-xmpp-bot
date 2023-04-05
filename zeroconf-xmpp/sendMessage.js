@@ -50,19 +50,33 @@ const getUrlForResponse = async (who) => {
     });
 }
 
+const formatMessageForBody = (message) => {
+    return encodeURIComponent(message);
+}
+
 const formatMessageForHtml = (message) => {
-    return message.replaceAll('\n', '<br />');
+    return message
+        .replaceAll('<', '&lt;')
+        .replaceAll('>', '&gt;')
+        .replaceAll('&', '&amp;')
+        .replaceAll('"', '&quot;')
+        .replaceAll('\'', '&apos;')
+        .replaceAll('\n', '<br />\n')
+        .replaceAll('`', '@')
+        .replaceAll(new RegExp('[@]+(.[^@]+)[@]+', 'mg'), '<span style="font-family: Courier New; font-size: 12px;">$1</span>');
 }
 
 const sendMessage = async (to, message) => {
     const urlBits = await getUrlForResponse(to);
     console.log(`Sending message to ${to}: ${message} at ${urlBits.url}:${urlBits.port}`);
     const socket = net.connect(urlBits.port, urlBits.url);
-    socket.write(
-        `<?xml version="1.0" encoding="UTF-8" ?>
-<stream:stream to="mulvaney@bragg" from="test thing" xmlns="jabber:client" xmlns:stream="http://etherx.jabber.org/streams">
-<message from="test thing" type="chat" to="mulvaney@bragg"><body>${message}</body><html xmlns="http://www.w3.org/1999/xhtml"><body><div><b>${formatMessageForHtml(message)}</b></div></body></html></message>
-</stream:stream>`,
+    const messageString = `<?xml version="1.0" encoding="UTF-8" ?>
+    <stream:stream to="mulvaney@bragg" from="test thing" xmlns="jabber:client" xmlns:stream="http://etherx.jabber.org/streams">
+    <message from="test thing" type="chat" to="mulvaney@bragg"><body>${formatMessageForBody(message)}</body><html xmlns="http://www.w3.org/1999/xhtml"><body><div><b>${formatMessageForHtml(message)}</b></div></body></html></message>
+    </stream:stream>`
+    console.debug(messageString);
+    socket.write(messageString
+        ,
         () => {
             socket.unref();
             socket.end();

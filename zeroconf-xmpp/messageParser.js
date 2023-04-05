@@ -1,6 +1,7 @@
 import { SaxesParser } from 'saxes';
 
 const parse = (messageString) => {
+    console.debug('Parsing message:', messageString);
     const parser = new SaxesParser({
         xmlns: true,
     });
