@@ -4,10 +4,12 @@ dotenv.config();
 import advertiseService from "./advertiseService.js";
 import createServer from "./listenForMessages.js";
 
+// who are the bots?
 const bots = [
     await import("./gpt35.js"),
 ]
 
+// stert the bots!
 const toCleanup = bots.map(botImport => {
     const bot = botImport.default();
     const advertisement = advertiseService({
