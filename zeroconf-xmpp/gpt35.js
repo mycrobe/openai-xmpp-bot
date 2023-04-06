@@ -4,6 +4,9 @@ import * as OpenAI from 'openai';
 const port = parseInt(process.env.GPT_BOT_PORT, 10);
 const key = process.env.OPENAI_API_KEY;
 
+const ADVERTISED_NAME = 'gpt35';
+const DISPLAY_NAME = 'GPT-3.5';
+
 const openai = new OpenAI.OpenAIApi(new OpenAI.Configuration({ apiKey: key }));
 
 const messageHistory = {};
@@ -26,7 +29,7 @@ const newMessage = (message) => {
 const handleMessage = async (message, recipient) => {
     if (message.body === 'reset') {
         resetMessages(recipient);
-        sendMessage(recipient, "All is forgotten!");
+        sendMessage(recipient, ADVERTISED_NAME, "All is forgotten!");
         return;
     }
 
@@ -41,23 +44,23 @@ const handleMessage = async (message, recipient) => {
 
         const responseMessage = { "role": "system", "content": completion.data.choices[0]?.message?.content };
         messages.push(responseMessage);
-        sendMessage(recipient, responseMessage.content);
+        sendMessage(recipient, ADVERTISED_NAME, responseMessage.content);
     } catch (error) {
         if (error.response) {
             console.log(error.response.status);
             console.log(error.response.data);
-            sendMessage(recipient, `We got a ${error.response.status} error from OpenAI with message ${error.response.data?.error?.message}}}`);
+            sendMessage(recipient, ADVERTISED_NAME, `We got a ${error.response.status} error from OpenAI with message ${error.response.data?.error?.message}}}`);
         } else {
             console.log(error.message);
-            sendMessage(recipient, error.message);
+            sendMessage(recipient, ADVERTISED_NAME, error.message);
         }
     }
 }
 
-export default () => ({
+export default async () => ({
     port,
-    advertiseName: 'gpt35',
-    displayName: 'GPT-3.5',
+    advertiseName: ADVERTISED_NAME,
+    displayName: DISPLAY_NAME,
     handleMessage,
     handleComposing: async (composing) => { /* ignored */ },
 });

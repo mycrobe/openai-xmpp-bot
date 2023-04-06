@@ -7,11 +7,13 @@ import createServer from "./listenForMessages.js";
 // who are the bots?
 const bots = [
     await import("./gpt35.js"),
+    await import("./imessageBots.js"),
 ]
 
 // stert the bots!
-const toCleanup = bots.map(botImport => {
-    const bot = botImport.default();
+const toCleanup = [];
+for await (const botImport of bots) {
+    const bot = await botImport.default();
     const advertisement = advertiseService({
         port: bot.port,
         advertisedName: bot.advertiseName,
@@ -22,8 +24,8 @@ const toCleanup = bots.map(botImport => {
         bot.handleMessage,
         bot.handleComposing
     );
-    return { advertisement, server };
-})
+    toCleanup.push({ advertisement, server });
+}
 
 // Cleanup on exit
 process.on('SIGINT', () => {

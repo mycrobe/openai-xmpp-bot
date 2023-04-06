@@ -13,42 +13,15 @@ Currently the plan is to:
 
 This is not idiomatic for XMPP, but it's the simplest way to get something working.
 */
-
+import _ from 'lodash';
 import dnssd from 'dnssd';
 import net from 'net';
+import { getAllServices, getServiceByName } from './dnssdBrowser.js';
 
 const XMPP_CLIENT_PORT = 12345; // Replace with the desired port for your XMPP client
 
 const botAvahiName = 'nodebot';
 const botDisplayName = 'Node Bot';
-
-/**
- * This cache is to work around dnssd sometimes not returning the ipv4 ip address.
- */
-const cache = {};
-
-const getUrlForResponse = async (who) => {
-    if (cache[who]) {
-        return cache[who];
-    }
-
-    return new Promise((resolve) => {
-        // Browse for the service
-        const browser = new dnssd.Browser(dnssd.tcp('presence'));
-
-        browser.on('serviceUp', (service) => {
-            // Check if the service name matches the desired name
-            if (service.name === who && service.addresses.find((address) => address.match(/192\.168\./))) {
-                const result = { url: service.addresses[0], port: service.port };
-                cache[who] = result;
-                resolve(result);
-                browser.stop();
-                return false;
-            }
-        });
-        browser.start();
-    });
-}
 
 const formatMessageForBody = (message) => {
     return encodeURIComponent(message);
@@ -66,13 +39,12 @@ const formatMessageForHtml = (message) => {
         .replaceAll(new RegExp('[@]+(.[^@]+)[@]+', 'mg'), '<span style="font-family: Courier New; font-size: 12px;">$1</span>');
 }
 
-const sendMessage = async (to, message) => {
-    const urlBits = await getUrlForResponse(to);
-    console.log(`Sending message to ${to}: ${message} at ${urlBits.url}:${urlBits.port}`);
+const _sendMessage = async (urlBits, to, from, message) => {
+    console.log(`Sending message from ${from} to ${to}: ${message} at ${urlBits.url}:${urlBits.port}`);
     const socket = net.connect(urlBits.port, urlBits.url);
     const messageString = `<?xml version="1.0" encoding="UTF-8" ?>
-    <stream:stream to="mulvaney@bragg" from="test thing" xmlns="jabber:client" xmlns:stream="http://etherx.jabber.org/streams">
-    <message from="test thing" type="chat" to="mulvaney@bragg"><body>${formatMessageForBody(message)}</body><html xmlns="http://www.w3.org/1999/xhtml"><body><div><b>${formatMessageForHtml(message)}</b></div></body></html></message>
+    <stream:stream to="${to}" from="${from}" xmlns="jabber:client" xmlns:stream="http://etherx.jabber.org/streams">
+    <message from="${from}" type="chat" to="${to}"><body>${formatMessageForBody(message)}</body><html xmlns="http://www.w3.org/1999/xhtml"><body><div><b>${formatMessageForHtml(message)}</b></div></body></html></message>
     </stream:stream>`
     console.debug(messageString);
     socket.write(messageString
@@ -81,6 +53,26 @@ const sendMessage = async (to, message) => {
             socket.unref();
             socket.end();
         });
+}
+
+const sendMessage = async (to, from, message) => {
+    _sendMessage(await getServiceByName(to), to, from, message);
 };
+
+export const broadcastMessage = async (from, message, filter = _.identity) => {
+    const allServices = await getAllServices();
+    const filtered = _.filter(allServices, filter);
+    for await (const target of filtered) {
+        await _sendMessage(target, target.to, from, message);
+    }
+};
+
+// setInterval(async () => {
+//     await broadcastMessage(
+//         'gpt35', 
+//         'hi!', 
+//         (thing) => thing.to.indexOf('@') > -1),
+//     10000
+// });
 
 export default sendMessage;

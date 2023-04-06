@@ -90,9 +90,21 @@ export const getConversations = async (since = DEFAULT_SINCE) => {
         }
     }
 
-    const conversations = _.groupBy(messages, 'guid');
+    const conversations = _.mapValues(
+        _.groupBy(messages, 'guid'),
+        (messages, guid) => {
+            const first = _.first(messages);
+            const notMe = _.find(messages, m => m.is_from_me === 0) || first;
+            return {
+                display_name: notMe.display_name,
+                latest_message: new Date(first.date_epoch_ms),
+                messages: messages,
+            }
+        }
+    );
+
     const sortedGuids = _.sortBy(Object.keys(conversations), guid => {
-        return -conversations[guid][0].date_epoch_ms;
+        return -conversations[guid].latest_message.getTime();
     });
 
     return { sortedGuids, conversations, mostRecentRecievedAt };
@@ -100,7 +112,7 @@ export const getConversations = async (since = DEFAULT_SINCE) => {
 
 export const monitorForChanges = async (handleUpdate = console.log, since = DEFAULT_SINCE) => {
     let lastUpdate = since;
-    
+
     const checker = async () => {
         const thisCheck = new Date();
         const { isUpdate } = await pollForChanges(lastUpdate);
