@@ -17,6 +17,7 @@ export default class Bot {
         this.name = name;
         this.id = id;
         this.handleMessage = handleMessage;
+        this.roster = [];
 
         this.initXmpp({ url, username, password });
     }
@@ -49,9 +50,17 @@ export default class Bot {
             //   Makes itself available
             const presence = xml("presence");
             await this.xmpp.send(presence);
+
+            // get roster
+            this.xmpp.send(xml(
+                'iq',
+                { id: 'roster_0', type: 'get' },
+                xml('query', { xmlns: 'jabber:iq:roster' })
+            ));
         });
 
         this.xmpp.on("stanza", async (stanza) => {
+            console.log('incoming stanza', stanza);
             if (stanza.is('message')) {
                 const { from, to } = stanza.attrs;
                 if (this.jid.indexOf(to) !== 0) {
@@ -72,24 +81,44 @@ export default class Bot {
             }
 
             else if (stanza.is('iq')) {
+                const { id, type } = stanza.attrs;
+                if (type === 'result' && id === 'roster_0') {
+                    const roster = stanza.getChild('query')?.getChildren('item');
+                    this.roster = roster?.map(item => item.attr('jid'));
+                    console.log(`Received result for ${id}. Roster is now ${this.roster}}`);
+                }
+
                 const jid = stanza.getChild('bind')?.getChild('jid')?.text();
-                console.log(`Received iq: I am ${jid}`);
+
                 if (jid) {
+                    console.log(`Received iq: I am ${jid}`);
                     if (this.jid && this.jid !== jid) {
                         throw new Error(`Received jid ${jid} from an iq but I am ${this.jid}`);
                     }
                     this.jid = jid;
+                }
+                else {
+                    console.log(`Received iq: ${stanza.toString()}}`);
                 }
             }
 
             else if (stanza.is('presence')) {
                 const from = stanza.attr('from');
                 const presence = Bot.getPresence(stanza);
+
+                // if someone subscribes to us, subscribe back unconditionally
+                if (presence === 'subscribe' || presence === 'unsubscribe') {
+                    console.log(`Received ${presence} from ${from}`);
+                    const msg = xml("presence", { type: `${presence}d`, to: from });
+                    await this.xmpp.send(msg);
+                    return;
+                }
+
                 console.log('presence', { from, presence });
             }
-            
+
             else {
-                console.log(`Received stanza: ${stanza.name}`);
+                console.log(`Received stanza: ${stanza.name}:\n${stanza.toString()}}`);
             }
         });
     }
@@ -103,7 +132,13 @@ export default class Bot {
     }
 
     static getPresence(stanza) {
-        const isConnected = stanza.attr('type') !== 'unavailable';
+        const type = stanza.attr('type');
+
+        if (type == 'subscribe' || type == 'subscribed' || type == 'unsubscribe' || type == 'unsubscribed') {
+            return type;
+        }
+
+        const isConnected = type !== 'unavailable';
         const statusMessage = stanza.getChild('status')?.text() || '';
         const show = stanza.getChild('show')?.text();
 
