@@ -4,11 +4,16 @@ import sendiMessage from './sendiMessage.js';
 
 const port = 12346;
 
+// Create an XMPP bot object (with information to advertise and create a server) for each
+// conversation in the database, created in order of recent converstaions (though this)
+// ordering may not actually matter, since the client has control over how the list is 
+// presented.
 const getBots = async () => {
     const conversations = await getConversations();
 
+    // TODO: support all the conversations
     // for now, just do me.
-    conversations.sortedGuids = ['iMessage;-;+16468233032'];
+    conversations.sortedGuids = ['iMessage;-;+14155094023'];
 
     const result = [];
     for await (const guid of conversations.sortedGuids) {
@@ -34,6 +39,7 @@ const getBots = async () => {
         }
     }
 
+    // 
     monitorForChanges(async (since) => {
         const { sortedGuids, conversations } = await getConversations(since);
         console.log(conversations);

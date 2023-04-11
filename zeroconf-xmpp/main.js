@@ -1,19 +1,22 @@
 import * as dotenv from 'dotenv';
 dotenv.config();
 
+import { setIgnoreList } from './dnssdBrowser.js';
 import advertiseService from "./advertiseService.js";
 import createServer from "./listenForMessages.js";
 
 // who are the bots?
 const bots = [
-    await import("./gpt35.js"),
-    await import("./imessageBots.js"),
-]
+    await (await import("./gpt35.js")).default(),
+    await (await import("./imessageBots.js")).default(),
+];
+
+setIgnoreList(bots.map((bot) => bot.advertiseName));
 
 // stert the bots!
 const toCleanup = [];
-for await (const botImport of bots) {
-    const bot = await botImport.default();
+for await (const bot of bots) {
+    // const bot = await botImport.default();
     const advertisement = advertiseService({
         port: bot.port,
         advertisedName: bot.advertiseName,

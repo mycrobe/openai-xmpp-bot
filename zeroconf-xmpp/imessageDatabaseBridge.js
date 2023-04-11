@@ -96,7 +96,7 @@ export const getConversations = async (since = DEFAULT_SINCE) => {
             const first = _.first(messages);
             const notMe = _.find(messages, m => m.is_from_me === 0) || first;
             return {
-                display_name: notMe.display_name,
+                display_name: notMe.display_name || notMe.chat_identifier,
                 latest_message: new Date(first.date_epoch_ms),
                 messages: messages,
             }
