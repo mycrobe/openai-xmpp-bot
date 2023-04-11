@@ -1,6 +1,8 @@
 {
   "dependencies": {
-    "lodash": "^4.17.21",
-    "sqlite3": "^5.1.6"
-  }
+    "@xmpp/client": "^0.13.1",
+    "@xmpp/debug": "^0.13.0",
+    "lodash": "^4.17.21"
+  },
+  "type": "module"
 }
