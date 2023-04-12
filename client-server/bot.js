@@ -18,6 +18,8 @@ export default class Bot {
         this.handleMessage = handleMessage;
         this.roster = [];
         this.isInitialized = new Promise((resolve => this._resolveInitialized = resolve));
+        this.show = 'chat';
+        this.status = '';
 
         this._initXmpp({ url, username, password });
     }
@@ -30,6 +32,28 @@ export default class Bot {
             xml("body", {}, body),
         );
         await this.xmpp.send(message);
+    }
+
+    async setStatus(show, status) {
+        if (!['chat', 'away', 'xa', 'dnd'].includes(show)) {
+            throw new Error(`Invalid status: ${show}`);
+        }
+
+        await this.isInitialized;
+
+        const children = [
+            xml("show", {}, show),
+        ];
+
+        if (status) {
+            children.push(xml("status", {}, status));
+        }
+
+        const presence = xml("presence", {}, children);
+        await this.xmpp.send(presence);
+
+        this.show = show;
+        this.status = status;
     }
 
     async _doPresenceSubscribe(action, to) {
@@ -54,24 +78,6 @@ export default class Bot {
     async unsubscribed(to) {
         return this._doPresenceSubscribe('unsubscribed', to);
     }
-
-    // async subscribeOrUnsubscribe(presence, from) {
-    //     await this.isInitialized;
-    //     const presenceMsg = xml("presence", { type: `${presence}d`, to: from });
-    //     this._log(presenceMsg.toString());
-    //     await this.xmpp.send(presenceMsg);
-
-    //     const to = this.jid.substring(0, this.jid.indexOf('/'));
-    //     const subscription = presence === 'subscribe' ? "both" : "remove";
-    //     const subscriptionMsg = xml(
-    //         "iq", { id: "subMsg_0", type: "set", to },
-    //         xml("query", { xmlns: "jabber:iq:roster" },
-    //             xml("item", { jid: from, subscription })
-    //         )
-    //     );
-    //     this._log(subscriptionMsg.toString());
-    //     await this.xmpp.send(subscriptionMsg);
-    // }
 
     async start() {
         await this.xmpp.start();
@@ -101,7 +107,7 @@ export default class Bot {
         this.xmpp.on("online", async (address) => {
             this._log(`${this.id} online at ${address}`);
 
-            //   Makes itself available
+            // Makes itself available
             const presence = xml("presence");
             await this.xmpp.send(presence);
 

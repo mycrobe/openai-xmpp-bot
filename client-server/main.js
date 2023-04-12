@@ -17,7 +17,7 @@ const admin = new Bot({
     handleMessage: (message) => {
         admin.sendMessage(message.from, message.body);
     }
-});
+}); 
 admin.start();
 
 await admin.subscribe(joe.account);
