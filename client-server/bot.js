@@ -1,6 +1,8 @@
 import { client, xml } from "@xmpp/client";
 import debug from "@xmpp/debug";
 
+import { botForUser } from "./adminTasks.js";
+
 export const defaults = Object.freeze({
     name: "Bot",
     url: "xmpp://dockerpi.local:5222",
@@ -41,12 +43,17 @@ export default class Bot {
     }
 
     // default implementation of subscription: subscribe back 
-    async handleSubscription(from) {
-        this.subscribe(from);
+    async handlePresenceSubscription(from) {
+        // accepts their request
+        this.presenceSubscribed(from);
+
+        // requests back
+        this.presenceSubscribe(from);
     }
 
-    async handleUnsubscription(from) {
-        this.unsubscribe(from);
+    async handlePresenceUnsubscription(from) {
+        this.presenceUnsubscribed(from);
+        this.presenceUnsubscribe(from);
     }
 
     async sendMessage(to, body) {
@@ -89,29 +96,66 @@ adium to hide the contact. Using default message ("away")`);
 
     async _doPresenceSubscribe(action, to) {
         await this.isInitialized;
-        const presenceMsg = xml("presence", { type: action, to });
+        const presenceMsg = xml("presence", { type: action, to, from: this.jid });
         this._log('sending presence', action, to, presenceMsg.toString());
         await this.xmpp.send(presenceMsg);
     }
 
-    async subscribe(to) {
+    async _doIqSubscribe(action, to) {
+        await this.isInitialized;
+
+        const itemAttrs = { jid: to };
+        if (action === 'subscribe') {
+            itemAttrs.ask = 'subscribe';
+        }
+        else if (action === 'unsubscribe') {
+            itemAttrs.subscription = 'remove';
+        }
+        else {
+            throw new Error(`Invalid action: ${action}`);
+        }
+
+        const iq = xml(
+            "iq",
+            { id: "subscribe_0", type: "set", to: this.account, from: this.jid },
+            xml(
+                "query",
+                { xmlns: "jabber:iq:roster" },
+                xml("item", itemAttrs)
+            )
+        );
+
+        this._log('sending iq', action, to, iq.toString());
+        this.xmpp.send(iq);
+    }
+
+    async presenceSubscribe(to) {
         await this._doPresenceSubscribe('subscribe', to);
     }
 
-    async unsubscribe(to) {
+    async presenceUnsubscribe(to) {
         await this._doPresenceSubscribe('unsubscribe', to);
     }
 
-    async subscribed(to) {
+    async iqSubscribe(to) {
+        await this._doIqSubscribe('subscribe', to);
+    }
+
+    async iqUnsubscribe(to) {
+        await this._doIqSubscribe('unsubscribe', to);
+    }
+
+    async presenceSubscribed(to) {
         await this._doPresenceSubscribe('subscribed', to);
     }
 
-    async unsubscribed(to) {
+    async presenceUnsubscribed(to) {
         return this._doPresenceSubscribe('unsubscribed', to);
     }
 
     async start() {
         await this.xmpp.start();
+        await this.isInitialized;
     }
 
     async stop() {
@@ -143,21 +187,34 @@ adium to hide the contact. Using default message ("away")`);
 
     async _handleIq(stanza) {
         const { id, type } = stanza.attrs;
+        const jid = stanza.getChild('bind')?.getChild('jid')?.text();
+        const query = stanza.getChild('query');
+
         if (type === 'result' && id === 'roster_0') {
             const roster = stanza.getChild('query')?.getChildren('item');
             this.roster = roster?.map(item => item.attr('jid'));
             this._log(`Received result for ${id}. Roster is now ${this.roster}`);
         }
-
-        const jid = stanza.getChild('bind')?.getChild('jid')?.text();
-
-        if (jid) {
+        else if (jid) {
             this._log(`Received iq: I am ${jid}`);
             if (this.jid && this.jid !== jid) {
                 throw new Error(`Received jid ${jid} from an iq but I am ${this.jid}`);
             }
             this.jid = jid;
             this.account = jid.substring(0, jid.indexOf('/'));
+        }
+        else if (query && query.attr('xmlns') === 'jabber:iq:roster') {
+            // just accept whatever the roster query requests
+            const attrs = {
+                type: 'result',
+                id: stanza.attr('id'),
+                to: stanza.attr('to'),
+                from: stanza.attr('to'),
+            };
+
+            const result = xml('iq', attrs);
+            this._log(`Received subscription iq: ${stanza.toString()}}. Sending accept result: ${result.toString()}`);
+            await this.xmpp.send(result);
         }
         else {
             this._log(`Received iq: ${stanza.toString()}}`);
@@ -171,13 +228,13 @@ adium to hide the contact. Using default message ("away")`);
         switch (presence) {
             // if someone subscribes to us, subscribe back unconditionally
             case 'subscribe':
-                await this.handleSubscription(from);
+                await this.handlePresenceSubscription(from);
                 break;
             case 'unsubscribe':
-                await this.handleUnsubscription(from);
+                await this.handlePresenceUnsubscription(from);
                 break;
             default:
-                this._log('ignoring presence', { from, presence });
+                this._log('ignoring presence', { from, presence }, stanza.toString());
         }
 
     }
@@ -251,39 +308,22 @@ adium to hide the contact. Using default message ("away")`);
         const state = stanza.getChildByAttr('xmlns', 'http://jabber.org/protocol/chatstates')?.name;
         const body = stanza.getChild('body')?.text();
 
-        if (state != 'active' || !body) {
+        if ((state && state != 'active') || !body) {
             return state;
         }
 
         return 'message';
     }
+
+    static async forUser(...args) {
+        return botForUser(...args)
+    }
 }
 
 export class EchoBot extends Bot {
-    async handleMessage(message) {
-        this._log(`Echoing message back to ${message.from}: ${message.body}`)
-        this.sendMessage(message.from, message.body);
+    handleMessage(from, body) {
+        this._log(`Echoing message back to ${from}: ${body}`)
+        this.sendMessage(from, body);
     }
 }
 
-export class AdminBot extends EchoBot {
-    async createNewAccount(username, password) {
-        const iqStanza = xml(
-            'iq',
-            {
-                type: 'set',
-                id: 'reg1'
-            },
-            xml(
-                'query',
-                {
-                    xmlns: 'jabber:iq:register'
-                },
-                xml('username', {}, username),
-                xml('password', {}, password)
-            )
-        );
-
-        await this.xmpp.send(iqStanza);
-    }
-}
