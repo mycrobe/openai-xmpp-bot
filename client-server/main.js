@@ -1,23 +1,11 @@
-import Bot from './bot.js';
+import { EchoBot } from './bot.js';
 
 // process.env["NODE_TLS_REJECT_UNAUTHORIZED"] = 0;
 
-const joe = new Bot({
-    password: "password", 
-    username: "joe",
-    handleMessage: (message) => {
-        console.log(message.from, message.body);
-    }
-});
+const joe = new EchoBot({ username: "joe", password: "password" });
 joe.start();
 
-const admin = new Bot({
-    password: "password", 
-    username: "admin",
-    handleMessage: (message) => {
-        admin.sendMessage(message.from, message.body);
-    }
-}); 
+const admin = new EchoBot({ username: "admin", password: "password" });
 admin.start();
 
 await admin.subscribe(joe.account);
