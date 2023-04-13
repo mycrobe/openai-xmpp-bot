@@ -284,6 +284,6 @@ export class AdminBot extends EchoBot {
             )
         );
 
-        await client.send(iqStanza);
+        await this.xmpp.send(iqStanza);
     }
 }
