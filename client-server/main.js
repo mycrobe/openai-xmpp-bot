@@ -1,3 +1,6 @@
+import * as dotenv from 'dotenv';
+dotenv.config();
+
 import { EchoBot, AdminBot } from './bot.js';
 
 // process.env["NODE_TLS_REJECT_UNAUTHORIZED"] = 0;
