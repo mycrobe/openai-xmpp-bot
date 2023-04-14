@@ -1,11 +1,17 @@
 import * as dotenv from 'dotenv';
 dotenv.config();
 
-import Bot from './Bot.js';
+import Bot, { EchoBot } from './Bot.js';
 import GptBot from './GptBot.js';
+import imessageManager from './ImessageManager.js';
 
-const gpt = await Bot.forUser('gpt', GptBot);
+// const gpt = await Bot.forUser('gpt', GptBot);
 
+imessageManager.start();
+const conversations = await imessageManager.getConversations();
+
+
+// imessageManager.stop();
 // process.env["NODE_TLS_REJECT_UNAUTHORIZED"] = 0;
 
 // const joe = new EchoBot({ username: "joe", password: "password" });
