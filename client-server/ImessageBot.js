@@ -32,25 +32,25 @@ export default class ImessageBot extends Bot {
                 this._resolveReadyToUpdateMessages();
                 delete this._resolveReadyToUpdateMessages;
             })
-            .then(() => this.updateMessages())
+            .then(() => this.updateMessages(this.messages, true))
             .then(() => {
                 this.messages.forEach(message => this.messageIds.add(message.ROWID));
             });
     }
 
-    async updateMessages(messages = this.messages) {
+    async updateMessages(messages = this.messages, isFirstUpdate = true) {
         await this.readyToUpdateMessages;
         // const newMessages = messages.filter(
         //     message => !this.messageIds.has(message.ROWID) && message.date > this.lastActivity
         // );
 
         for (const message of messages) {
-            await this.handleImessage(message.text, message.is_from_me === 1);
+            await this.handleImessage(message.text, message.is_from_me === 1, isFirstUpdate);
         }
     }
 
     // a new message has come in from imessage
-    async handleImessage(text, isFromMe) {
+    async handleImessage(text, isFromMe, isFirstUpdate) {
         // if we recently sent this message, assume it's an echo of the one we proxied from xmpp,
         // so we should filter it out
         if (this.recentlySentMessages.has(text)) {
@@ -58,7 +58,7 @@ export default class ImessageBot extends Bot {
             return;
         }
 
-        const body = `${isFromMe ? 'You' : this.displayName}: ${text}`;
+        const body = isFirstUpdate ? `${isFromMe ? 'You' : this.displayName}: ${text}` : text;
         // forward it to xmpp!
         this.sendMessage('joe@dockerpi.local', body);
     }

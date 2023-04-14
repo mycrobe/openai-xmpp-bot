@@ -60,7 +60,7 @@ class ImessageManager {
             }
             else {
                 const bot = this.bots[guid];
-                bot.updateMessages(messages);
+                bot.updateMessages(messages, false);
             }
         }
     }

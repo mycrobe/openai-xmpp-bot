@@ -6,9 +6,6 @@ export const getNameByPhoneNumber = _.memoize((phone) => {
 
     return new Promise((resolve, reject) => {
 
-        // remove all non-digit characters
-        phone = phone.replace(/\D/g, "");
-
         // check the length of the phone number
         if (phone.length === 11) {
             // if the length is 11, assume it's a US number and format it accordingly
