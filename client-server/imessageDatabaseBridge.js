@@ -126,8 +126,7 @@ export const monitorForChanges = async (handleUpdate, since = DEFAULT_SINCE) => 
             console.log('ImessageDatabaseBridge: skipping scheduled update since one is already in progress');
             return;
         }
-
-        console.log('ImessageDatabaseBridge: checking for changes', lastUpdate);
+        
         isUpdating = true;
         const thisCheck = new Date();
         if (await pollForChanges(lastUpdate)) {
@@ -135,9 +134,7 @@ export const monitorForChanges = async (handleUpdate, since = DEFAULT_SINCE) => 
             await handleUpdate(lastUpdate);
             lastUpdate = thisCheck;
         }
-        else {
-            console.log('ImessageDatabaseBridge: no change', lastUpdate);
-        }
+
         isUpdating = false;
     }
     return setInterval(checker, 10000);
