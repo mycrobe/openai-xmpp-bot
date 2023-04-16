@@ -113,6 +113,11 @@ export default class ImessageBot extends Bot {
             }
         }
 
+        // handle when i send iMessage from actual Messages client, and it comes over the wire to xmpp client
+        else if (isFromMe) {
+            prefix = 'You: ';
+        }
+
         // always do tapbacks
         else if (isTapback) {
             prefix = isFromMe ? 'You ' : 'They ';
