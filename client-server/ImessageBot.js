@@ -61,12 +61,14 @@ export default class ImessageBot extends Bot {
         // make clear an incoming message is actually from you during a recap
         if (doingRecap) {
             const dateString = date.toLocaleString('en-US', { hour: 'numeric', minute: 'numeric', hour12: true });
-            prefix = `(${dateString}): `;
             if (isFromMe) {
-                prefix = `You ${prefix}`;
+                prefix = `${dateString} -- You: `;
             }
             else if (isTapback) {
-                prefix = `They ${prefix}`;
+                prefix = `${dateString} -- They: `;
+            }
+            else {
+                prefix = dateString + ': ';
             }
         }
 
