@@ -51,7 +51,48 @@ export default class ImessageBot extends Bot {
         const body = `${prefix}${text}`;
 
         // forward it to xmpp!
-        this.sendMessage('joe@dockerpi.local', body);
+        this.sendMessage('joe@dockerpi.local', body); // this only seems to go to one connected client
+
+        // here's an experiment where we send it to both explicitly. There's an xmpp stanza that should
+        // return in a iq response with the list of connected clients. 
+
+        // this.sendMessage('joe@dockerpi.local/bragg', body);
+        // this.sendMessage('joe@dockerpi.local/petal', body);
+
+        // I asked chat gpt how to get the list of connected clients, and they said:
+
+        /*
+
+        Yes, you can use the XMPP stanza to retrieve information about the active client sessions for a 
+        given account name in ejabberd. To do this, you can use the XMPP Disco Items protocol to retrieve 
+        a list of all active sessions for a given account. Here's an example of how you can do this:
+
+        To specify the user of interest whose active sessions you want to retrieve, you need to replace
+        user in the jid attribute of the XMPP Disco Items request with the actual JID of the user whose
+        sessions you want to retrieve. Here's an updated example XMPP stanza with the jid attribute set
+        to the JID of the user example@domain.com:
+
+<iq type='get' id='disco1' to='domain.com' xmlns='jabber:client'>
+  <query xmlns='http://jabber.org/protocol/disco#items' node='http://jabber.org/protocol/commands'/>
+  <item jid='example@domain.com' />
+</iq>
+
+        Replace domain.com with the actual domain name of your ejabberd server. This request will return
+        a list of all active sessions for the user example@domain.com. Note that the node attribute is
+        not strictly necessary for this request, so you can omit it if you prefer.
+
+        The XMPP server will respond to the XMPP Disco Items request with an IQ stanza containing a list
+        of all active sessions for the specified user. Here's an example of what the response stanza might
+        look like:
+
+<iq type='result' id='disco1' from='domain.com' xmlns='jabber:client'>
+  <query xmlns='http://jabber.org/protocol/disco#items'>
+    <item jid='example@domain.com/12345' node='http://jabber.org/protocol/commands'/>
+    <item jid='example@domain.com/67890' node='http://jabber.org/protocol/commands'/>
+  </query>
+</iq>
+
+        */
     }
 
     static getMessageTextPrefix(text, date, isFromMe, doingRecap) {
