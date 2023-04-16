@@ -87,12 +87,10 @@ export const getConversations = async (since = DEFAULT_SINCE) => {
             row.display_name = 'self';
         }
         else if (!row.display_name) {
-            console.log('checking friendly name for row', row.id);
             row.display_name = await getNameByPhoneNumber(row.id);
-            console.log('got friendly name ' + row.display_name + ' for row', row.id);
         }
         else if (!row.display_name) {
-            console.log('no display name for', row.id);
+            console.log('no display name for', row.id, 'just using that');
             row.display_name = row.id;
         }
     }
@@ -126,7 +124,7 @@ export const monitorForChanges = async (handleUpdate, since = DEFAULT_SINCE) => 
             console.log('ImessageDatabaseBridge: skipping scheduled update since one is already in progress');
             return;
         }
-        
+
         isUpdating = true;
         const thisCheck = new Date();
         if (await pollForChanges(lastUpdate)) {
