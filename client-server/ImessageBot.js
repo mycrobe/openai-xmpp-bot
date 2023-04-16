@@ -25,6 +25,8 @@ export default class ImessageBot extends Bot {
     }
 
     async initialize() {
+        this.setFullname(this.displayName);
+
         lastActivityForUser(this.botName)
             .then(lastActivity => {
                 this.lastActivity = lastActivity;

@@ -24,6 +24,20 @@ export default class Bot {
         this._initXmpp({ url, username, password });
     }
 
+    async setFullname(fullName) {
+        const iq = xml(
+            'iq',
+            { type: 'set', id: 'fullName_0', to: this.account, from: this.account },
+            xml(
+                'vCard',
+                { xmlns: 'vcard-temp' },
+                xml('FN', {}, fullName)
+            )
+        );
+
+        this.xmpp.send(iq);
+    }
+
     async handleConnection(address) {
         await this.isInitialized;
 
