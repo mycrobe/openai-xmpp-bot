@@ -1,6 +1,5 @@
 import Bot from './Bot.js';
 import _ from 'lodash';
-import { lastActivityForUser } from './adminTasks.js';
 import sendiMessage from './sendiMessage.js';
 
 export default class ImessageBot extends Bot {
@@ -18,29 +17,19 @@ export default class ImessageBot extends Bot {
         this.messages = args.messages;
         this.displayName = args.display_name;
         this.mostRecentMessageDate = args.latest_message;
-        this.lastActivity = new Date(0);
-        this.readyToUpdateMessages = new Promise(resolve => this._resolveReadyToUpdateMessages = resolve);
 
         this.recentlySentMessages = new Set();
     }
 
     async initialize() {
         this.setFullname(this.displayName);
-
-        lastActivityForUser(this.botName)
-            .then(lastActivity => {
-                this.lastActivity = lastActivity;
-                this._resolveReadyToUpdateMessages();
-                delete this._resolveReadyToUpdateMessages;
-            })
-            .then(() => this.updateMessages(this.messages, false));
     }
 
     async updateMessages(messages = [], doingRecap = false) {
-        await this.readyToUpdateMessages;
+        await this.isInitialized;
 
         for (const message of messages) {
-            await this.handleImessage(message.text, message.is_from_me === 1, doingRecap);
+            await this.handleImessage(message.text, message.date, message.is_from_me === 1, doingRecap);
         }
 
         // keep the last 5 messages for recap
@@ -49,7 +38,7 @@ export default class ImessageBot extends Bot {
     }
 
     // a new message has come in from imessage
-    async handleImessage(text, isFromMe, doingRecap = false) {
+    async handleImessage(text, date, isFromMe, doingRecap = false) {
         // if we recently sent this message, assume it's an echo of the one we proxied from xmpp,
         // so we should filter it out
         if (this.recentlySentMessages.has(text)) {
@@ -57,7 +46,7 @@ export default class ImessageBot extends Bot {
             return;
         }
 
-        const prefix = doingRecap ? `${isFromMe ? 'You: ' : ''}` : '';
+        const prefix = ImessageBot.getMessageTextPrefix(text, date, isFromMe, doingRecap);
 
         const body = `${prefix}${text}`;
 
@@ -65,9 +54,34 @@ export default class ImessageBot extends Bot {
         this.sendMessage('joe@dockerpi.local', body);
     }
 
+    static getMessageTextPrefix(text, date, isFromMe, doingRecap) {
+        const isTapback = !!text.match(/^(Loved|Liked|Disliked|Emphasized|Questioned|Laughed at) [“].*[”]$/);
+        let prefix = '';
+
+        // make clear an incoming message is actually from you during a recap
+        if (doingRecap) {
+            const dateString = date.toLocaleString('en-US', { hour: 'numeric', minute: 'numeric', hour12: true });
+            prefix = `(${dateString}): `;
+            if (isFromMe) {
+                prefix = `You ${prefix}`;
+            }
+            else if (isTapback) {
+                prefix = `They ${prefix}`;
+            }
+        }
+
+        // always do tapbacks
+        else if (isTapback) {
+            prefix = isFromMe ? 'You ' : 'They ';
+        }
+
+        return prefix;
+    }
+
     // a new message has come in from an xmpp contact
     async handleMessage(from, message) {
         if (message === 'recap') {
+            console.log("recapping")
             await this.updateMessages(this.messages, true);
             return;
         }
