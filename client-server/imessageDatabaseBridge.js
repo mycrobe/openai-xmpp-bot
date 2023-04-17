@@ -1,3 +1,10 @@
+/*
+Portions of this code has been taken from, and modified from:
+
+https://github.com/CamHenlin/imessagegraphqlserver/blob/master/src/imessage.js
+
+*/
+
 import sqlite3 from 'sqlite3';
 import _ from 'lodash';
 import { getNameByPhoneNumber } from './addressbookLookup.js';
@@ -45,7 +52,7 @@ const recentMessages = (since = DEFAULT_SINCE) => {
                     handle.id,
                     chat.guid,
                     chat.chat_identifier,
-                    chat.display_name,
+                    chat.display_name as chat_display_name,
 					message.text,
                     chat.display_name,
                     ((message.date / 1000000000) + 978307200) * 1000 AS date_epoch_ms
@@ -74,6 +81,28 @@ const recentMessages = (since = DEFAULT_SINCE) => {
     });
 }
 
+const getParticipants = async (guid) => {
+    return new Promise((resolve, reject) => {
+        db.serialize(() => {
+            const query = `
+                SELECT h.id
+                FROM chat c
+                INNER JOIN chat_handle_join chj ON c.ROWID = chj.chat_id
+                INNER JOIN handle h ON chj.handle_id = h.ROWID
+                WHERE c.guid = '${guid}' and c.service_name = 'iMessage';
+            `;
+
+            db.all(query, (err, rows) => {
+                if (err) {
+                    reject(err);
+                } else {
+                    resolve(rows);
+                }
+            });
+        });
+    });
+}
+
 export const getConversations = async (since = DEFAULT_SINCE) => {
     const messages = await recentMessages(since);
     if (!messages.length) {
@@ -82,9 +111,9 @@ export const getConversations = async (since = DEFAULT_SINCE) => {
     const mostRecentRecievedAt = new Date(_.maxBy(messages, 'date_epoch_ms')?.date_epoch_ms);
     for await (const row of messages) {
         row.date = new Date(row.date_epoch_ms);
-        
+
         if (row.is_from_me === 1) {
-            row.display_name = 'self';
+            row.display_name = 'You';
         }
         else if (!row.display_name) {
             row.display_name = await getNameByPhoneNumber(row.id);
@@ -100,24 +129,51 @@ export const getConversations = async (since = DEFAULT_SINCE) => {
         (messages, guid) => {
             const first = _.last(messages);
             const notMe = _.find(messages, m => m.is_from_me === 0);
+            const isMultiuserChat = !!first.chat_identifier.match(/^chat\d+$/);
             return {
-                id: first.id,
-                display_name: notMe?.display_name || notMe?.chat_identifier,
+                id: first.chat_identifier,
+                guid,
+                isMultiuserChat,
+                display_name: isMultiuserChat ? first.chat_display_name : notMe?.display_name,
                 latest_message: new Date(first.date_epoch_ms),
                 messages: messages,
             }
         }
     );
 
-    // handle case where we have no display name for a conversation becasue the only messages in the convo
-    // are from me.
+
     for await (const guid of Object.keys(conversations)) {
         const conversation = conversations[guid];
-        if (!conversation.display_name) {
-            conversation.display_name = await getNameByPhoneNumber(conversation.id);
+
+        // add names of participants to group chat conversations
+        if (conversation.isMultiuserChat) {
+            conversation.participants = await getParticipants(conversation.guid);
+            for await (const participant of conversation.participants) {
+                participant.name = await getNameByPhoneNumber(participant.id);
+                if (!participant.name) {
+                    participant.name = `Unknown (${participant.id})`;
+                }
+            }
+            if (!conversation.display_name) {
+                conversation.display_name = conversation.participants.map(p => p.name).join(', ');
+            }
+        }
+        else {
+            conversation.participants = [{
+                id: conversation.id,
+                name: conversation.display_name,
+            }];
+
+            // handle case where we have no display name for a conversation becasue the only messages in the convo
+            // are from me.
+            if (!conversation.display_name) {
+                conversation.display_name = await getNameByPhoneNumber(conversation.id);
+                if (!conversation.display_name) {
+                    conversation.display_name = `Unknown (${conversation.id})`;
+                }
+            }
         }
     }
-
 
     const sortedGuids = _.sortBy(Object.keys(conversations), guid => {
         return conversations[guid].latest_message.getTime();

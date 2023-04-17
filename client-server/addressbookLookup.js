@@ -1,3 +1,10 @@
+/*
+Portions of this code has been taken from, and modified from:
+
+https://github.com/CamHenlin/imessagegraphqlserver/blob/master/src/imessage.js
+
+*/
+
 import sqlite3 from 'sqlite3';
 import glob from 'glob';
 import _ from 'lodash';

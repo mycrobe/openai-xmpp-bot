@@ -17,6 +17,7 @@ export default class ImessageBot extends Bot {
         this.messages = args.messages;
         this.displayName = args.display_name;
         this.mostRecentMessageDate = args.latest_message;
+        this.participants = args.participants;
 
         this.recentlySentMessages = new Set();
     }
@@ -40,7 +41,7 @@ export default class ImessageBot extends Bot {
         await this.isInitialized;
 
         for (const message of messages) {
-            await this.handleImessage(message.text, message.date, message.is_from_me === 1, doingRecap);
+            await this.handleImessage(message, doingRecap);
         }
 
         // keep the last 5 messages for recap
@@ -49,7 +50,9 @@ export default class ImessageBot extends Bot {
     }
 
     // a new message has come in from imessage
-    async handleImessage(text, date, isFromMe, doingRecap = false) {
+    async handleImessage(message, doingRecap = false) {
+        const { text } = message;
+
         // if we recently sent this message, assume it's an echo of the one we proxied from xmpp,
         // so we should filter it out
         if (this.recentlySentMessages.has(text)) {
@@ -57,7 +60,7 @@ export default class ImessageBot extends Bot {
             return;
         }
 
-        const prefix = ImessageBot.getMessageTextPrefix(text, date, isFromMe, doingRecap);
+        const prefix = ImessageBot.getMessageTextPrefix(message, doingRecap);
 
         const body = `${prefix}${text}`;
 
@@ -106,35 +109,47 @@ export default class ImessageBot extends Bot {
         */
     }
 
-    static getMessageTextPrefix(text, date, isFromMe, doingRecap) {
+    static getMessageTextPrefix(message, doingRecap) {
+        const { chat_identifier, display_name, text, date, is_from_me } = message;
+        const isMultiuserChat = chat_identifier.match(/^chat\d+$/);
         const isTapback = !!text.match(/^(Loved|Liked|Disliked|Emphasized|Questioned|Laughed at) [“].*[”]$/);
-        let prefix = '';
-
-        // make clear an incoming message is actually from you during a recap
-        if (doingRecap) {
-            const dateString = date.toLocaleString('en-US', { hour: 'numeric', minute: 'numeric', hour12: true });
-            if (isFromMe) {
-                prefix = `${dateString} -- You: `;
-            }
-            else if (isTapback) {
-                prefix = `${dateString} -- They: `;
+        const dateString = date.toLocaleString('en-US', { hour: 'numeric', minute: 'numeric', hour12: true });
+        
+        if (isMultiuserChat) {
+            if (doingRecap) {
+                return `${dateString} -- ${display_name}: `
             }
             else {
-                prefix = dateString + ': ';
+                return `${display_name}: `;
+            }
+        }
+
+        // make clear an incoming message is actually from you during a recap
+        else if (doingRecap) {
+            if (is_from_me) {
+                return `${dateString} -- You: `;
+            }
+            else if (isTapback) {
+                return `${dateString} -- They: `;
+            }
+            else {
+                return dateString + ': ';
             }
         }
 
         // handle when i send iMessage from actual Messages client, and it comes over the wire to xmpp client
-        else if (isFromMe) {
-            prefix = 'You: ';
+        // TODO make this work if another client on same XMPP account sends a message. Currently they are not
+        // visible.
+        else if (is_from_me) {
+            return 'You: ';
         }
 
         // always do tapbacks
         else if (isTapback) {
-            prefix = isFromMe ? 'You ' : 'They ';
+            return is_from_me ? 'You ' : 'They ';
         }
 
-        return prefix;
+        return '';
     }
 
     // a new message has come in from an xmpp contact
@@ -145,11 +160,21 @@ export default class ImessageBot extends Bot {
             return;
         }
 
+        else if (message === 'who') {
+            this.sendMessage(from, `${this.participants.map(p => p.name).join(', ')}`);
+            return;
+        }
+
         // add it to set of recently sent messages so we can filter the corresponding message coming back from imessage
         this.recentlySentMessages.add(message);
 
         // forward it to imessage!
-        await sendiMessage(this.guid, message);
+        try {
+            await sendiMessage(this.guid, message);
+        }
+        catch (e) {
+            this.sendMessage(from, `Error sending message: ${e.message}`);
+        }
     }
 
     async updateStatus() {

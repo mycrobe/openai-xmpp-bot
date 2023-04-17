@@ -38,7 +38,7 @@ class ImessageManager {
         if (mostRecentRecievedAt) {
             this.mostRecentRecievedAt = mostRecentRecievedAt;
         }
-        
+
         if (this._resolveInitialized) {
             this._resolveInitialized();
             delete this._resolveInitialized;
@@ -51,12 +51,16 @@ class ImessageManager {
     async updateBots() {
         await this.didInitialize;
         for await (const guid of this.sortedGuids) {
-            const { messages, display_name, latest_message } = this.conversations[guid];
+            const { messages, display_name, latest_message, participants } = this.conversations[guid];
 
             const botName = ImessageManager.getBotName(guid);
             if (!this.bots[guid]) {
                 await createIfNew(botName);
-                const newBot = await ImessageBot.forUser(botName, ImessageBot, { guid, botName, messages, display_name, latest_message });
+                const newBot = await ImessageBot.forUser(
+                    botName,
+                    ImessageBot,
+                    { guid, botName, messages, display_name, latest_message, participants }
+                );
                 this.bots[guid] = newBot;
             }
             else {
