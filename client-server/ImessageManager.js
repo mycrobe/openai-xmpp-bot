@@ -45,6 +45,7 @@ class ImessageManager {
         }
 
         await this.updateBots();
+        await this.updateBotStatuses();
     }
 
     async updateBots() {
@@ -61,6 +62,16 @@ class ImessageManager {
             else {
                 const bot = this.bots[guid];
                 bot.updateMessages(messages, false);
+            }
+        }
+    }
+
+    async updateBotStatuses() {
+        await this.didInitialize;
+        for await (const guid of this.sortedGuids) {
+            const bot = this.bots[guid];
+            if (bot) {
+                await bot.updateStatus();
             }
         }
     }

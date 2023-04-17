@@ -23,6 +23,17 @@ export default class ImessageBot extends Bot {
 
     async initialize() {
         this.setFullname(this.displayName);
+        this.followJoe();
+    }
+
+    async followJoe() {
+        await this.isInitialized;
+        await this.gotRoster;
+
+        if (!(this.roster.includes('joe@dockerpi.local') || this.id.match(/^chat\d+$/))) {
+            this.presenceSubscribe('joe@dockerpi.local');
+            this.sendMessage('joe@dockerpi.local', 'Hi! I\'m a bot that proxies your iMessages. IMPORTANT! Anything you reply to me will go to the recipient of this conversation.');
+        }
     }
 
     async updateMessages(messages = [], doingRecap = false) {
@@ -139,5 +150,33 @@ export default class ImessageBot extends Bot {
 
         // forward it to imessage!
         await sendiMessage(this.guid, message);
+    }
+
+    async updateStatus() {
+        await this.isInitialized;
+        
+        const hoursSinceLastMessage = (Date.now() - this.mostRecentMessageDate) / 1000 / 60 / 60;
+        let show;
+        let status;
+        if (hoursSinceLastMessage > 24) {
+            show = 'xa';
+            const days = Math.floor(hoursSinceLastMessage / 24);
+            if (days < 2) {
+                `Last message ${Math.floor(hoursSinceLastMessage)} hours ago`
+            }
+            else {
+                status = `Last message ${days} days ago`;
+            }
+        }
+        else if (hoursSinceLastMessage > 1) {
+            show = 'away';
+            status = `Last message ${Math.floor(hoursSinceLastMessage)} hours ago`;
+        }
+        else {
+            show = 'chat';
+            status = `Last message ${Math.floor(hoursSinceLastMessage * 60)} minutes ago`;
+        }
+       
+        this.setStatus(show, status);
     }
 }

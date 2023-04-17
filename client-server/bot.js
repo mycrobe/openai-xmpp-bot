@@ -18,6 +18,7 @@ export default class Bot {
         this.id = username;
         this.roster = [];
         this.isInitialized = new Promise((resolve => this._resolveInitialized = resolve));
+        this.gotRoster = new Promise((resolve => this._resolveGotRoster = resolve));
         this.show = 'chat';
         this.status = '';
 
@@ -59,15 +60,15 @@ export default class Bot {
     // default implementation of subscription: subscribe back 
     async handlePresenceSubscription(from) {
         // accepts their request
-        this.presenceSubscribed(from);
+        await this.presenceSubscribed(from);
 
         // requests back
-        this.presenceSubscribe(from);
+        await this.presenceSubscribe(from);
     }
 
     async handlePresenceUnsubscription(from) {
-        this.presenceUnsubscribed(from);
-        this.presenceUnsubscribe(from);
+        await this.presenceUnsubscribed(from);
+        await this.presenceUnsubscribe(from);
     }
 
     async sendMessage(to, body) {
@@ -207,6 +208,8 @@ adium to hide the contact. Using default message ("away")`);
         if (type === 'result' && id === 'roster_0') {
             const roster = stanza.getChild('query')?.getChildren('item');
             this.roster = roster?.map(item => item.attr('jid'));
+            this._resolveGotRoster && this._resolveGotRoster();
+            delete this._resolveGotRoster;
             this._log(`Received result for ${id}. Roster is now ${this.roster}`);
         }
         else if (jid) {

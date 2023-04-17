@@ -7,7 +7,7 @@ const db = new sqlite3.Database(file);
 
 export const DEFAULT_SINCE = (() => {
     let d = new Date();
-    d.setDate(d.getDate() - 1);
+    d.setDate(d.getDate() - 14);
     return d;
 })();
 
@@ -98,15 +98,26 @@ export const getConversations = async (since = DEFAULT_SINCE) => {
     const conversations = _.mapValues(
         _.groupBy(messages, 'guid'),
         (messages, guid) => {
-            const first = _.first(messages);
-            const notMe = _.find(messages, m => m.is_from_me === 0) || first;
+            const first = _.last(messages);
+            const notMe = _.find(messages, m => m.is_from_me === 0);
             return {
-                display_name: notMe.display_name || notMe.chat_identifier,
+                id: first.id,
+                display_name: notMe?.display_name || notMe?.chat_identifier,
                 latest_message: new Date(first.date_epoch_ms),
                 messages: messages,
             }
         }
     );
+
+    // handle case where we have no display name for a conversation becasue the only messages in the convo
+    // are from me.
+    for await (const guid of Object.keys(conversations)) {
+        const conversation = conversations[guid];
+        if (!conversation.display_name) {
+            conversation.display_name = await getNameByPhoneNumber(conversation.id);
+        }
+    }
+
 
     const sortedGuids = _.sortBy(Object.keys(conversations), guid => {
         return conversations[guid].latest_message.getTime();
