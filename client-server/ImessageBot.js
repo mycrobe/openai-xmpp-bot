@@ -53,6 +53,11 @@ export default class ImessageBot extends Bot {
     async handleImessage(message, doingRecap = false) {
         const { text } = message;
 
+        if (text === null) {
+            this._log('ignoring message with `null` text', message);
+            return;
+        }
+
         // if we recently sent this message, assume it's an echo of the one we proxied from xmpp,
         // so we should filter it out
         if (this.recentlySentMessages.has(text)) {
@@ -187,7 +192,7 @@ export default class ImessageBot extends Bot {
             show = 'xa';
             const days = Math.floor(hoursSinceLastMessage / 24);
             if (days < 2) {
-                `Last message ${Math.floor(hoursSinceLastMessage)} hours ago`
+                status = `Last message ${Math.floor(hoursSinceLastMessage)} hours ago`
             }
             else {
                 status = `Last message ${days} days ago`;

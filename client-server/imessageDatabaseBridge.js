@@ -182,8 +182,8 @@ export const getConversations = async (since = DEFAULT_SINCE) => {
     return { sortedGuids, conversations, mostRecentRecievedAt };
 };
 
-export const monitorForChanges = async (handleUpdate, since = DEFAULT_SINCE) => {
-    let lastUpdate = since;
+export const monitorForChanges = async (handleUpdate) => {
+    let lastUpdate = DEFAULT_SINCE;
     let isUpdating = false;
 
     const checker = async () => {
@@ -194,12 +194,18 @@ export const monitorForChanges = async (handleUpdate, since = DEFAULT_SINCE) => 
 
         isUpdating = true;
         const thisCheck = new Date();
-        if (await pollForChanges(lastUpdate)) {
+        const isChange = await pollForChanges(lastUpdate);
+
+        if (isChange) {
             console.log('ImessageDatabaseBridge: got change', lastUpdate);
-            await handleUpdate(lastUpdate);
-            lastUpdate = thisCheck;
         }
 
+        await handleUpdate(isChange, lastUpdate);
+
+        if (isChange) {
+            lastUpdate = thisCheck;
+        }
+        
         isUpdating = false;
     }
     return setInterval(checker, 10000);

@@ -20,9 +20,15 @@ class ImessageManager {
 
     async stop() {
         clearInterval(this.monitor);
+        await Promise.all([...Object.values(this.bots).map(bot => bot.stop())]);
     }
 
-    async handleChange(since) {
+    async handleChange(isChange, since) {
+        if (!isChange) {
+            await this.updateBotStatuses();
+            return;
+        }
+
         const { sortedGuids, conversations, mostRecentRecievedAt } = await getConversations(since);
         this.conversations = conversations;
 
@@ -72,12 +78,9 @@ class ImessageManager {
 
     async updateBotStatuses() {
         await this.didInitialize;
-        for await (const guid of this.sortedGuids) {
-            const bot = this.bots[guid];
-            if (bot) {
-                await bot.updateStatus();
-            }
-        }
+        return Promise.all([
+            ...Object.values(this.bots).map(bot => bot.updateStatus())
+        ]);
     }
 
     async getConversation(guid) {

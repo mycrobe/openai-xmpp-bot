@@ -1,6 +1,8 @@
 import { client, xml } from "@xmpp/client";
 import debug from "@xmpp/debug";
 
+import process from 'process';
+
 import { botForUser } from "./adminTasks.js";
 
 export const defaults = Object.freeze({
@@ -19,8 +21,8 @@ export default class Bot {
         this.roster = [];
         this.isInitialized = new Promise((resolve => this._resolveInitialized = resolve));
         this.gotRoster = new Promise((resolve => this._resolveGotRoster = resolve));
-        this.show = 'chat';
-        this.status = '';
+        this.show = undefined;
+        this.status = undefined;
 
         this._initXmpp({ url, username, password });
     }
@@ -82,6 +84,7 @@ export default class Bot {
     }
 
     async setStatus(show, status) {
+        await this.isInitialized;
         if (!['chat', 'away', 'xa', 'dnd'].includes(show)) {
             throw new Error(`Invalid status: ${show}`);
         }
@@ -93,20 +96,20 @@ adium to hide the contact. Using default message ("away")`);
             status = 'away';
         }
 
-        await this.isInitialized;
+        if (status !== this.status || show !== this.show) {
+            const children = [
+                xml("show", {}, show),
+            ];
+            if (status) {
+                children.push(xml("status", {}, status));
+            }
 
-        const children = [
-            xml("show", {}, show),
-        ];
-        if (status) {
-            children.push(xml("status", {}, status));
+            const presence = xml("presence", {}, children);
+            await this.xmpp.send(presence);
+
+            this.show = show;
+            this.status = status;
         }
-
-        const presence = xml("presence", {}, children);
-        await this.xmpp.send(presence);
-
-        this.show = show;
-        this.status = status;
     }
 
     async _doPresenceSubscribe(action, to) {
@@ -174,6 +177,7 @@ adium to hide the contact. Using default message ("away")`);
     }
 
     async stop() {
+        await this.xmpp.send(xml('presence', { type: 'unavailable' }));
         await this.xmpp.stop();
     }
 
@@ -260,7 +264,7 @@ adium to hide the contact. Using default message ("away")`);
         this.xmpp = client({
             service: url,
             domain: "dockerpi.local",
-            resource: "example",
+            resource: process.env['XMPP_CLIENT_RESOURCE'] || "example",
             username: username,
             password: password,
         });

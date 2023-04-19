@@ -10,4 +10,16 @@ await gpt.setFullname('GPT 3.5 Turbo');
 await gpt.presenceSubscribe('joe@dockerpi.local');
 
 imessageManager.start();
-const conversations = await imessageManager.getConversations();
+
+// Cleanup on exit
+process.on('SIGINT', () => {
+    console.log('stopping');
+    Promise.all([
+        gpt.stop(),
+        imessageManager.stop(),
+    ]).then(() => {
+        console.log('stopped');
+        process.exit()
+    });
+});
+
