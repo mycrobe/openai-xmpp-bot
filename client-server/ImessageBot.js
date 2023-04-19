@@ -15,8 +15,8 @@ export default class ImessageBot extends Bot {
         this.guid = args.guid;
         this.botName = args.botName;
         this.messages = args.messages;
-        this.displayName = args.displayName;
-        this.mostRecentMessageDate = _.last(this.messages)?.date;
+        this.displayName = args.display_name;
+        this.mostRecentMessageDate = args.latest_message;
         this.participants = args.participants;
 
         this.recentlySentMessages = new Set();
@@ -24,7 +24,6 @@ export default class ImessageBot extends Bot {
 
     async initialize() {
         this.setFullname(this.displayName);
-        this.updateStatus();
         this.followJoe();
     }
 
@@ -41,26 +40,13 @@ export default class ImessageBot extends Bot {
     async updateMessages(messages = [], doingRecap = false) {
         await this.isInitialized;
 
-        let mostRecent;
         for (const message of messages) {
             await this.handleImessage(message, doingRecap);
-            if (message.is_from_me === 0) {
-                mostRecent = message;
-            }
-        }
-        if (!mostRecent) {
-            mostRecent = new Date(0);
-        }
-
-        if (mostRecent.date > this.mostRecentMessageDate) {
-            this.mostRecentMessageDate = mostRecent.date;
         }
 
         // keep the last 5 messages for recap
         this.messages.push(...messages);
         this.messages = _.takeRight(this.messages, 5);
-
-        this.updateStatus();
     }
 
     // a new message has come in from imessage
@@ -192,14 +178,8 @@ export default class ImessageBot extends Bot {
     }
 
     async updateStatus() {
-        
         await this.isInitialized;
         
-        if (!this.mostRecentMessageDate || this.mostRecentMessageDate.getTime() === 0) {
-            this.setStatus('xa', 'No messages received recently');
-            return;
-        }
-
         const hoursSinceLastMessage = (Date.now() - this.mostRecentMessageDate) / 1000 / 60 / 60;
         let show;
         let status;
@@ -221,7 +201,7 @@ export default class ImessageBot extends Bot {
             show = 'chat';
             status = `Last message ${Math.floor(hoursSinceLastMessage * 60)} minutes ago`;
         }
-
+       
         this.setStatus(show, status);
     }
 }
