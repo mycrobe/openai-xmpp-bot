@@ -42,8 +42,8 @@ export default class Bot {
     async handleConnection(address) {
         await this.isInitialized;
 
-        // Makes itself available
-        await this.setStatus('chat');
+        // // Makes itself available
+        // await this.setStatus('chat');
 
         // request roster, will get it later in an `iq` request
         await this.xmpp.send(xml(
@@ -82,6 +82,14 @@ export default class Bot {
     }
 
     async setStatus(show, status) {
+        if (this.previousStatus === status) {
+            // don't send the same status twice
+            return;
+        }
+        else {
+            this.previousStatus = status;
+        }
+
         if (!['chat', 'away', 'xa', 'dnd'].includes(show)) {
             throw new Error(`Invalid status: ${show}`);
         }

@@ -127,15 +127,15 @@ export const getConversations = async (since = DEFAULT_SINCE) => {
     const conversations = _.mapValues(
         _.groupBy(messages, 'guid'),
         (messages, guid) => {
-            const first = _.last(messages);
+            const last = _.last(messages);
             const notMe = _.find(messages, m => m.is_from_me === 0);
-            const isMultiuserChat = !!first.chat_identifier.match(/^chat\d+$/);
+            const isMultiuserChat = !!last.chat_identifier.match(/^chat\d+$/);
             return {
-                id: first.chat_identifier,
+                id: last.chat_identifier,
                 guid,
                 isMultiuserChat,
-                display_name: isMultiuserChat ? first.chat_display_name : notMe?.display_name,
-                latest_message: new Date(first.date_epoch_ms),
+                displayName: isMultiuserChat ? last.chat_display_name : notMe?.display_name,
+                latestMessage: last.date,
                 messages: messages,
             }
         }
@@ -154,29 +154,29 @@ export const getConversations = async (since = DEFAULT_SINCE) => {
                     participant.name = `Unknown (${participant.id})`;
                 }
             }
-            if (!conversation.display_name) {
-                conversation.display_name = conversation.participants.map(p => p.name).join(', ');
+            if (!conversation.displayName) {
+                conversation.displayName = conversation.participants.map(p => p.name).join(', ');
             }
         }
         else {
             conversation.participants = [{
                 id: conversation.id,
-                name: conversation.display_name,
+                name: conversation.displayName,
             }];
 
             // handle case where we have no display name for a conversation becasue the only messages in the convo
             // are from me.
-            if (!conversation.display_name) {
-                conversation.display_name = await getNameByPhoneNumber(conversation.id);
-                if (!conversation.display_name) {
-                    conversation.display_name = `Unknown (${conversation.id})`;
+            if (!conversation.displayName) {
+                conversation.displayName = await getNameByPhoneNumber(conversation.id);
+                if (!conversation.displayName) {
+                    conversation.displayName = `Unknown (${conversation.id})`;
                 }
             }
         }
     }
 
     const sortedGuids = _.sortBy(Object.keys(conversations), guid => {
-        return conversations[guid].latest_message.getTime();
+        return conversations[guid].latestMessage.getTime();
     });
 
     return { sortedGuids, conversations, mostRecentRecievedAt };

@@ -45,13 +45,12 @@ class ImessageManager {
         }
 
         await this.updateBots();
-        await this.updateBotStatuses();
     }
 
     async updateBots() {
         await this.didInitialize;
         for await (const guid of this.sortedGuids) {
-            const { messages, display_name, latest_message, participants } = this.conversations[guid];
+            const { messages, displayName, participants } = this.conversations[guid];
 
             const botName = ImessageManager.getBotName(guid);
             if (!this.bots[guid]) {
@@ -59,23 +58,13 @@ class ImessageManager {
                 const newBot = await ImessageBot.forUser(
                     botName,
                     ImessageBot,
-                    { guid, botName, messages, display_name, latest_message, participants }
+                    { guid, botName, messages, displayName, participants }
                 );
                 this.bots[guid] = newBot;
             }
             else {
                 const bot = this.bots[guid];
                 bot.updateMessages(messages, false);
-            }
-        }
-    }
-
-    async updateBotStatuses() {
-        await this.didInitialize;
-        for await (const guid of this.sortedGuids) {
-            const bot = this.bots[guid];
-            if (bot) {
-                await bot.updateStatus();
             }
         }
     }
