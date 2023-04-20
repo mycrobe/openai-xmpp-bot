@@ -47,6 +47,7 @@ export default class ImessageBot extends Bot {
         // keep the last 5 messages for recap
         this.messages.push(...messages);
         this.messages = _.takeRight(this.messages, 5);
+        this.mostRecentMessageDate = _.last(messages).date;
     }
 
     // a new message has come in from imessage
