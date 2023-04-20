@@ -47,7 +47,12 @@ export default class ImessageBot extends Bot {
         // keep the last 5 messages for recap
         this.messages.push(...messages);
         this.messages = _.takeRight(this.messages, 5);
-        this.mostRecentMessageDate = _.last(messages).date;
+
+        // only update status for most recent message from someone else
+        const lastMessage = _.filter(this.messages, (m) => m.is_from_me === 0);
+        if (!lastMessage) {
+            this.mostRecentMessageDate = lastMessage.date;
+        }
     }
 
     // a new message has come in from imessage
