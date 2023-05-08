@@ -14,7 +14,7 @@ const db = new sqlite3.Database(file);
 
 export const DEFAULT_SINCE = (() => {
     let d = new Date();
-    d.setDate(d.getDate() - 14);
+    d.setDate(d.getDate() - 3);
     return d;
 })();
 

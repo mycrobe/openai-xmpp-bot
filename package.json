@@ -12,6 +12,6 @@
     "nodemon": "^2.0.22"
   },
   "scripts": {
-    "start": "nodemon client-server/main.js"
+    "start": "node client-server/main.js | tee output.log 2> error.log"
   }
 }
